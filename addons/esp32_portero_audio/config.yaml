@@ -7,17 +7,22 @@ arch:
   - armv7
   - aarch64
   - i386
+
 startup: services
 boot: auto
 homeassistant: "2023.0.0"
+
 options: {}
 schema: {}
+
 ports:
-  "8123/tcp": 8123
-  "8765/udp": 8765
+  "8124/tcp": 8124   # WebSocket
+  "8765/udp": 8765   # UDP audio
+
 ports_description:
-  "8123/tcp": "WebSocket server port"
+  "8124/tcp": "WebSocket server port"
   "8765/udp": "UDP audio port"
-webui: "http://[HOST]:8123"
+
+webui: "http://[HOST]:8124"
 ingress: false
 init: false
