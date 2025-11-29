@@ -1,5 +1,13 @@
 {
-  "name": "ESP32 Portero Addons",
+  "name": "ESP32 Intercom Addons",
+  "maintainer": "Rit4lin",
   "url": "https://github.com/Rit4lin/ESP32-intercom",
-  "maintainer": "Rit4lin"
+  "addons": {
+    "esp32_portero_audio": {
+      "name": "ESP32 Portero Audio",
+      "slug": "esp32_portero_audio",
+      "description": "Audio bidireccional ESP32 → Home Assistant sin latencia",
+      "url": "https://github.com/Rit4lin/ESP32-intercom/tree/main/esp32_portero_audio"
+    }
+  }
 }
