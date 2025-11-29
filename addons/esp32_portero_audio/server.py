@@ -1,62 +1,80 @@
 import asyncio
 import websockets
-import socket
 
-# Configuración
-UDP_PORT = 8765        # Puerto donde escucha HA el audio del ESP32
-WS_PORT = 8123         # Puerto WebSocket para enviar audio al ESP32
+WS_PORT = 8124
+UDP_PORT = 8765
 
 clients = set()
 
-# -------------------------------
-#   Servidor UDP (RECIBIR AUDIO)
-# -------------------------------
-async def udp_server():
-    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp.bind(("0.0.0.0", UDP_PORT))
-    print(f"[UDP] Escuchando audio en puerto {UDP_PORT}...")
 
-    loop = asyncio.get_event_loop()
+async def broadcast(data: bytes):
+    """Envía los datos recibidos por UDP a todos los clientes WebSocket."""
+    if not clients:
+        return
 
-    while True:
-        data, addr = await loop.run_in_executor(None, udp.recvfrom, 2048)
-        print(f"[UDP] {len(data)} bytes desde {addr}")
-        # Aquí podrías reenviar el audio al móvil via WebRTC en un futuro
+    to_remove = set()
+    coros = []
+    for ws in clients:
+        if ws.closed:
+            to_remove.add(ws)
+            continue
+        coros.append(ws.send(data))
+
+    for ws in to_remove:
+        clients.discard(ws)
+
+    if coros:
+        await asyncio.gather(*coros, return_exceptions=True)
 
 
-# ----------------------------------------
-#   Servidor WebSocket (ENVIAR AUDIO)
-# ----------------------------------------
+class UdpProtocol:
+    def __init__(self):
+        self.transport = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+        print(f"UDP escuchando en 0.0.0.0:{UDP_PORT}")
+
+    def datagram_received(self, data, addr):
+        # Cada datagrama que llega se reenvía por WebSocket
+        asyncio.create_task(broadcast(data))
+
+    def error_received(self, exc):
+        print(f"Error UDP: {exc}")
+
+    def connection_lost(self, exc):
+        print("Conexión UDP cerrada")
+
+
 async def ws_handler(websocket, path):
+    """Maneja las conexiones WebSocket (solo envío de audio por ahora)."""
+    print("Cliente WebSocket conectado")
     clients.add(websocket)
-    print("[WS] Cliente conectado")
-
     try:
-        async for message in websocket:
-            # mensaje = bytes de audio enviados desde Home Assistant → ESP32
-            print(f"[WS] Enviando {len(message)} bytes a ESP32...")
-    except:
-        pass
+        async for _ in websocket:
+            # Si quieres aceptar mensajes desde HA, procesa aquí
+            pass
     finally:
-        clients.remove(websocket)
-        print("[WS] Cliente desconectado")
+        print("Cliente WebSocket desconectado")
+        clients.discard(websocket)
 
 
-async def ws_server():
-    print(f"[WS] Servidor WebSocket en puerto {WS_PORT}...")
-    async with websockets.serve(ws_handler, "0.0.0.0", WS_PORT):
-        await asyncio.Future()  # nunca termina
-
-
-# -------------------------------
-#   EJECUCIÓN PRINCIPAL
-# -------------------------------
 async def main():
-    await asyncio.gather(
-        udp_server(),
-        ws_server()
+    loop = asyncio.get_running_loop()
+
+    # Servidor WebSocket
+    ws_server = await websockets.serve(ws_handler, "0.0.0.0", WS_PORT)
+    print(f"WebSocket escuchando en ws://0.0.0.0:{WS_PORT}")
+
+    # Servidor UDP
+    await loop.create_datagram_endpoint(
+        lambda: UdpProtocol(),
+        local_addr=("0.0.0.0", UDP_PORT),
     )
 
+    # Mantener el servicio vivo
+    await ws_server.wait_closed()
+
+
 if __name__ == "__main__":
-    print("Servidor de audio ESP32 Intercom iniciado")
     asyncio.run(main())
