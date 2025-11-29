@@ -1,2 +1,6 @@
 #!/usr/bin/env bash
-python3 /app/server.py
+set -e
+
+echo "Iniciando ESP32 Intercom Audio Server..."
+
+exec python3 /server.py
