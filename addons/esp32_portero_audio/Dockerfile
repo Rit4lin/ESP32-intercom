@@ -1,8 +1,4 @@
-FROM ubuntu:22.04
-
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -11,6 +7,7 @@ COPY run.sh /app/run.sh
 
 RUN chmod +x /app/run.sh
 
-EXPOSE 8099
+EXPOSE 8123
+EXPOSE 8765/udp
 
 CMD ["/app/run.sh"]
