@@ -1,8 +1,8 @@
-FROM ubuntu:22.04
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:13.2.2
+FROM ${BUILD_FROM}
 
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
+# Instalar Python3
+RUN apk add --no-cache python3 py3-pip
 
 WORKDIR /app
 
@@ -13,4 +13,4 @@ RUN chmod +x /app/run.sh
 
 EXPOSE 8099
 
-CMD ["/app/run.sh"]
+CMD [ "/app/run.sh" ]
