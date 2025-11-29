@@ -1,15 +1,12 @@
-FROM ubuntu:22.04
-
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
+FROM python:3.11-slim
 
 WORKDIR /app
 
 COPY server.py /app/server.py
 COPY run.sh /app/run.sh
 
-RUN chmod +x /app/run.sh
+RUN chmod +x /app/run.sh && \
+    pip install --no-cache-dir websockets numpy
 
 EXPOSE 8099
 
