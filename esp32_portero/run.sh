@@ -1,4 +1,2 @@
-#!/bin/bash
-
-echo "Iniciando servidor ESP32 Portero..."
+#!/usr/bin/env bash
 python3 /app/server.py
