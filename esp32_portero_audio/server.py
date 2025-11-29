@@ -1,41 +1,40 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import asyncio
+import websockets
+import socket
 
-HOST = "0.0.0.0"
-PORT = 8099
+ESP32_IP = "192.168.1.141"
+ESP32_RX_PORT = 12346
+ESP32_TX_PORT = 12345
 
-class AudioHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        try:
-            length = int(self.headers.get('Content-Length', 0))
-            audio = self.rfile.read(length)
+clients = set()
 
-            print(f"[INFO] Recibidos {len(audio)} bytes de audio.")
+sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-            with open("/data/ultimo.raw", "ab") as f:
-                f.write(audio)
+sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock_rx.bind(("0.0.0.0", ESP32_TX_PORT))
 
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-        except Exception as e:
-            print("[ERROR]", e)
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(b"ERROR")
+async def udp_to_ws():
+    while True:
+        data, _ = sock_rx.recvfrom(2048)
+        for ws in list(clients):
+            try:
+                await ws.send(data)
+            except:
+                pass
 
-    def log_message(self, *args):
-        return  # Quita el spam
-
-def main():
-    print("Servidor escuchando en puerto", PORT)
-    server = HTTPServer((HOST, PORT), AudioHandler)
-
+async def ws_handler(websocket):
+    clients.add(websocket)
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
+        async for data in websocket:
+            sock_tx.sendto(data, (ESP32_IP, ESP32_RX_PORT))
+    finally:
+        clients.remove(websocket)
 
-    server.server_close()
+async def main():
+    print("Servidor WebSocket listo en puerto 8099")
+    await asyncio.gather(
+        websockets.serve(ws_handler, "0.0.0.0", 8099),
+        udp_to_ws()
+    )
 
-if __name__ == "__main__":
-    main()
+asyncio.run(main())
