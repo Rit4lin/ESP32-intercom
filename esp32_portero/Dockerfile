@@ -1,7 +1,9 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:13.2.2
 FROM ${BUILD_FROM}
 
-RUN apk add --no-cache python3 py3-pip
+# Python + dependencias
+RUN apk add --no-cache python3 py3-pip && \
+    pip3 install websockets
 
 WORKDIR /app
 
