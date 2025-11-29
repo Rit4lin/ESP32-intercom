@@ -1,7 +1,6 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:13.2.2
 FROM ${BUILD_FROM}
 
-# Instalar Python3
 RUN apk add --no-cache python3 py3-pip
 
 WORKDIR /app
