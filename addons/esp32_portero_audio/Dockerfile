@@ -1,19 +1,18 @@
-FROM python:3.11-slim
+ARG BUILD_FROM=ghcr.io/home-assistant/{arch}-base:latest
+FROM ${BUILD_FROM}
 
-# Crear carpeta del servidor
-WORKDIR /app
+# Instalamos Python y dependencias
+RUN apk add --no-cache python3 py3-pip
 
-# Instalar dependencias
-RUN pip install websockets
+# Instalamos librería websockets para el servidor
+RUN pip3 install --no-cache-dir websockets
 
-# Copiar archivos del addon
-COPY server.py /app/server.py
-COPY run.sh /app/run.sh
+# Copiamos el código del add-on
+COPY server.py /server.py
+COPY run.sh /run.sh
 
-# Dar permisos de ejecución
-RUN chmod +x /app/run.sh
+# Damos permisos de ejecución al script de arranque
+RUN chmod a+x /run.sh
 
-EXPOSE 8123/tcp
-EXPOSE 8765/udp
-
-CMD ["/app/run.sh"]
+# Comando por defecto del contenedor
+CMD ["/run.sh"]
