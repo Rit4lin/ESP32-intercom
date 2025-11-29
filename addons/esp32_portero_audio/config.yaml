@@ -9,7 +9,7 @@ arch:
   - i386
 startup: services
 boot: auto
-homeassistant: 2023.0.0
+homeassistant: 2025.11.1
 options: {}
 schema: {}
 ports:
@@ -21,3 +21,4 @@ ports_description:
 webui: "http://[HOST]:8123"
 ingress: false
 init: false
+
