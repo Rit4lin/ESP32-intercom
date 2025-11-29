@@ -1,0 +1,13 @@
+{
+  "name": "ESP32 Portero Audio",
+  "version": "1.0",
+  "slug": "esp32_portero_audio",
+  "description": "Servidor WebSocket para audio bidireccional con ESP32",
+  "startup": "services",
+  "boot": "auto",
+  "ports": {
+    "8099/tcp": 8099
+  },
+  "schema": {},
+  "options": {}
+}
