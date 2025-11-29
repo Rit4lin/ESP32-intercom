@@ -1,7 +1,7 @@
 name: "ESP32 Portero"
 version: "1.0.0"
 slug: "esp32_portero"
-description: "Servidor de audio simple para ESP32 (portero DIY)"
+description: "Servidor de audio push-to-talk para ESP32 como portero"
 arch:
   - amd64
   - aarch64
@@ -10,5 +10,11 @@ startup: services
 boot: auto
 ports:
   8099/tcp: 8099
-options: {}
-schema: {}
+options:
+  esp32_host: "192.168.1.50"
+  port_in: 5001     # puerto por el que ESP32 envía audio a HA
+  port_out: 5002    # puerto por el que HA envía audio al ESP32
+schema:
+  esp32_host: str
+  port_in: int
+  port_out: int
