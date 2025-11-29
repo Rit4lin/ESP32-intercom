@@ -1,95 +1,42 @@
 import asyncio
-import json
-import socket
-import threading
-from pathlib import Path
-
 import websockets
+import socket
 
-OPTIONS_PATH = Path("/data/options.json")
-
-# Leemos la configuración del add-on
-def load_options():
-    if not OPTIONS_PATH.exists():
-        return {
-            "esp32_host": "192.168.1.141",
-            "port_in": 5001,
-            "port_out": 5002,
-        }
-    with open(OPTIONS_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-opts = load_options()
-ESP32_HOST = opts.get("esp32_host", "192.168.1.141")
-PORT_IN = int(opts.get("port_in", 5001))
-PORT_OUT = int(opts.get("port_out", 5002))
-WS_PORT = 8099
-
-print("[INFO] Configuración:")
-print("  ESP32_HOST:", ESP32_HOST)
-print("  PORT_IN   :", PORT_IN)
-print("  PORT_OUT  :", PORT_OUT)
-print("  WS_PORT   :", WS_PORT)
-
-sock_in = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock_in.bind(("0.0.0.0", PORT_IN))
-
-sock_out = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+ESP32_IP = "192.168.1.141"
+ESP32_RX_PORT = 12346  # HA -> ESP
+ESP32_TX_PORT = 12345  # ESP -> HA
 
 clients = set()
-loop = asyncio.get_event_loop()
 
-async def broadcast_to_clients(data: bytes):
-    if not clients:
-        return
-    broken = []
-    for ws in clients:
-        try:
-            await ws.send(data)
-        except:
-            broken.append(ws)
-    for ws in broken:
-        clients.discard(ws)
+# UDP socket para enviar audio al ESP32
+sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-def udp_receiver_thread():
-    print(f"[INFO] Recibiendo audio desde ESP32 en UDP {PORT_IN}")
+# UDP socket para recibir del ESP32
+sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock_rx.bind(("0.0.0.0", ESP32_TX_PORT))
+
+async def udp_to_websocket():
     while True:
-        try:
-            data, _ = sock_in.recvfrom(2048)
-            asyncio.run_coroutine_threadsafe(
-                broadcast_to_clients(data),
-                loop
-            )
-        except Exception as e:
-            print("[ERROR] UDP receiver:", e)
+        data, _ = sock_rx.recvfrom(2048)
+        for ws in clients:
+            try:
+                await ws.send(data)
+            except:
+                pass
 
-async def ws_handler(websocket, path):
-    print("[INFO] Cliente WebSocket conectado")
+async def websocket_handler(websocket):
     clients.add(websocket)
     try:
         async for message in websocket:
-            if isinstance(message, (bytes, bytearray)):
-                try:
-                    sock_out.sendto(message, (ESP32_HOST, PORT_OUT))
-                except Exception as e:
-                    print("[ERROR] Envío a ESP32:", e)
-            else:
-                print("[WS] Mensaje no-binario:", message)
-    except:
-        print("[INFO] Cliente WS desconectado")
+            sock_tx.sendto(message, (ESP32_IP, ESP32_RX_PORT))
     finally:
-        clients.discard(websocket)
+        clients.remove(websocket)
 
-def main():
-    t = threading.Thread(target=udp_receiver_thread, daemon=True)
-    t.start()
+async def main():
+    print("Servidor WebSocket listo en puerto 8099")
+    await asyncio.gather(
+        websockets.serve(websocket_handler, "0.0.0.0", 8099),
+        udp_to_websocket(),
+    )
 
-    start_server = websockets.serve(ws_handler, "0.0.0.0", WS_PORT, max_size=None)
-
-    print(f"[INFO] Servidor WebSocket en puerto {WS_PORT}")
-    loop.run_until_complete(start_server)
-    loop.run_forever()
-
-if __name__ == "__main__":
-    main()
-
+asyncio.run(main())
