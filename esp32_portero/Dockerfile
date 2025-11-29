@@ -1,16 +1,11 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:13.2.2
-FROM ${BUILD_FROM}
-
-RUN apk add --no-cache python3 py3-pip && \
-    pip3 install websockets
+FROM python:3.11-slim
 
 WORKDIR /app
 
 COPY server.py /app/server.py
-COPY run.sh /app/run.sh
 
-RUN chmod +x /app/run.sh
+RUN pip install --no-cache-dir websockets sounddevice numpy
 
 EXPOSE 8099
 
-CMD [ "/app/run.sh" ]
+CMD ["python3", "/app/server.py"]
