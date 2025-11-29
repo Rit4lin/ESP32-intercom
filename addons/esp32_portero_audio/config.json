@@ -1,0 +1,23 @@
+{
+  "name": "ESP32 Intercom Audio Server",
+  "version": "1.0.0",
+  "slug": "esp32_portero_audio",
+  "description": "Servidor de audio para intercom basado en ESP32 (WebSocket + UDP).",
+  "arch": ["amd64", "armv7", "aarch64", "i386"],
+  "startup": "services",
+  "boot": "auto",
+  "homeassistant": "2023.0.0",
+  "options": {},
+  "schema": {},
+  "ports": {
+    "8123/tcp": 8123,
+    "8765/udp": 8765
+  },
+  "ports_description": {
+    "8123/tcp": "WebSocket server port",
+    "8765/udp": "UDP audio port"
+  },
+  "webui": "http://[HOST]:8123",
+  "ingress": false,
+  "init": false
+}
