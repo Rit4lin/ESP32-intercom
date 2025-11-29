@@ -1,41 +1,34 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import asyncio
+import json
+import websockets
 
-HOST = "0.0.0.0"
-PORT = 8099
+CLIENTS = set()
 
-class AudioHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        try:
-            length = int(self.headers.get('Content-Length', 0))
-            audio = self.rfile.read(length)
-
-            print(f"[INFO] Recibidos {len(audio)} bytes de audio.")
-
-            with open("/data/ultimo.raw", "ab") as f:
-                f.write(audio)
-
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-        except Exception as e:
-            print("[ERROR]", e)
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(b"ERROR")
-
-    def log_message(self, *args):
-        return  # Quita el spam
-
-def main():
-    print("Servidor escuchando en puerto", PORT)
-    server = HTTPServer((HOST, PORT), AudioHandler)
+async def handler(websocket):
+    print("Cliente conectado:", websocket.remote_address)
+    CLIENTS.add(websocket)
 
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
+        async for message in websocket:
+            data = json.loads(message)
+            print("Mensaje recibido:", data)
+
+            # Reenviar a todos (esp32 <-> Home Assistant)
+            for client in CLIENTS:
+                if client != websocket:
+                    await client.send(message)
+
+    except websockets.exceptions.ConnectionClosed:
         pass
 
-    server.server_close()
+    finally:
+        CLIENTS.remove(websocket)
+        print("Cliente desconectado")
+
+async def main():
+    print("Servidor WebRTC/Signaling en puerto 8099")
+    async with websockets.serve(handler, "0.0.0.0", 8099):
+        await asyncio.Future()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
